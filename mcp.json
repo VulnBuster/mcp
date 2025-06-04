@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "bandit-security": {
+      "command": "npx",
+      "args": [
+        "-y", 
+        "mcp-remote", 
+        "http://localhost:7860/gradio_api/mcp/sse",
+        "--transport", 
+        "sse-only"
+      ]
+    }
+  }
+}

@@ -1,0 +1,4 @@
+gradio[mcp]
+bandit[toml,baseline,sarif]
+pathlib
+smolagents 
