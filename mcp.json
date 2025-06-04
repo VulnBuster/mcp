@@ -9,6 +9,16 @@
         "--transport", 
         "sse-only"
       ]
+    },
+    "detect-secrets": {
+      "command": "npx",
+      "args": [
+        "-y", 
+        "mcp-remote", 
+        "http://localhost:7861/gradio_api/mcp/sse",
+        "--transport", 
+        "sse-only"
+      ]
     }
   }
 }

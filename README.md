@@ -19,20 +19,29 @@ MCP (Model Context Protocol) wrapper for Bandit - a specialized Python security 
 pip install -r requirements.txt
 ```
 
-### 2. Run Server
+### 2. Run Servers
 
 ```bash
+# Run Bandit MCP server
 python app.py
+
+# Run Detect Secrets MCP server
+python detect_secrets_mcp.py
 ```
 
-The server will be available at:
-- **Web Interface**: `http://localhost:7860`
-- **MCP Server**: `http://localhost:7860/gradio_api/mcp/sse`
-- **MCP Schema**: `http://localhost:7860/gradio_api/mcp/schema`
+The servers will be available at:
+- **Bandit Web Interface**: `http://localhost:7860`
+- **Bandit MCP Server**: `http://localhost:7860/gradio_api/mcp/sse`
+- **Bandit MCP Schema**: `http://localhost:7860/gradio_api/mcp/schema`
+- **Detect Secrets Web Interface**: `http://localhost:7861`
+- **Detect Secrets MCP Server**: `http://localhost:7861/gradio_api/mcp/sse`
+- **Detect Secrets MCP Schema**: `http://localhost:7861/gradio_api/mcp/schema`
 
 ## 🔧 Available Tools
 
-### 1. `bandit_scan` - Basic Scanning
+### 1. Bandit Tools
+
+#### 1.1 `bandit_scan` - Basic Scanning
 
 Analyzes Python code for security issues.
 
@@ -53,7 +62,7 @@ bandit_scan(
 )
 ```
 
-### 2. `bandit_baseline` - Baseline Management
+#### 1.2 `bandit_baseline` - Baseline Management
 
 Creates baseline file or compares with existing one.
 
@@ -61,13 +70,61 @@ Creates baseline file or compares with existing one.
 - `target_path`: Path to project for analysis
 - `baseline_file`: Path to baseline file
 
-### 3. `bandit_profile_scan` - Profile Scanning
+#### 1.3 `bandit_profile_scan` - Profile Scanning
 
 Runs scanning using specific security profile.
 
 **Parameters:**
 - `target_path`: Path to project
 - `profile_name`: "ShellInjection", "SqlInjection", "Crypto", "Subprocess"
+
+### 2. Detect Secrets Tools
+
+#### 2.1 `detect_secrets_scan` - Basic Scanning
+
+Scans code for secrets using detect-secrets.
+
+**Parameters:**
+- `code_input`: Code to scan or path to file/directory
+- `scan_type`: "code" (direct code) or "path" (file/directory)
+- `base64_limit`: Entropy limit for base64 strings (0.0-8.0)
+- `hex_limit`: Entropy limit for hex strings (0.0-8.0)
+- `exclude_lines`: Regex pattern for lines to exclude
+- `exclude_files`: Regex pattern for files to exclude
+- `exclude_secrets`: Regex pattern for secrets to exclude
+- `word_list`: Path to word list file
+- `output_format`: "json" or "txt"
+
+**Usage Example:**
+```python
+detect_secrets_scan(
+    code_input="API_KEY = 'sk_live_51H1h2K3L4M5N6O7P8Q9R0S1T2U3V4W5X6Y7Z8'",
+    scan_type="code",
+    base64_limit=4.5,
+    hex_limit=3.0
+)
+```
+
+#### 2.2 `detect_secrets_baseline` - Baseline Management
+
+Creates or updates a baseline file for detect-secrets.
+
+**Parameters:**
+- `target_path`: Path to code for analysis
+- `baseline_file`: Path to baseline file
+- `base64_limit`: Entropy limit for base64 strings
+- `hex_limit`: Entropy limit for hex strings
+
+#### 2.3 `detect_secrets_audit` - Baseline Audit
+
+Audits a detect-secrets baseline file.
+
+**Parameters:**
+- `baseline_file`: Path to baseline file
+- `show_stats`: Show statistics
+- `show_report`: Show report
+- `only_real`: Only show real secrets
+- `only_false`: Only show false positives
 
 ## 🎯 What Bandit Detects
 
@@ -79,6 +136,18 @@ Runs scanning using specific security profile.
 - **SSL Issues**: Missing certificate verification
 - **Weak Encryption Algorithms**: Using outdated methods
 - **File Permission Issues**: Insecure file permissions
+
+## 🔍 What Detect Secrets Detects
+
+- **API Keys**: Various service API keys
+- **Passwords**: High entropy strings that look like passwords
+- **Private Keys**: RSA, SSH, and other private keys
+- **OAuth Tokens**: Various OAuth tokens
+- **AWS Keys**: AWS access and secret keys
+- **GitHub Tokens**: GitHub personal access tokens
+- **Slack Tokens**: Slack API tokens
+- **Stripe Keys**: Stripe API keys
+- **And More**: Many other types of secrets
 
 ## 🧪 Vulnerable Code Examples
 
@@ -105,6 +174,16 @@ import pickle
 data = pickle.loads(user_data)  # B301: Pickle usage
 ```
 
+### 5. API Key
+```python
+API_KEY = "sk_live_51H1h2K3L4M5N6O7P8Q9R0S1T2U3V4W5X6Y7Z8"  # Detect Secrets: API Key
+```
+
+### 6. Private Key
+```python
+private_key = "-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIBAAKCAQEA..."  # Detect Secrets: Private Key
+```
+
 ## 🌐 MCP Client Integration
 
 ### Configuration for Cursor IDE
@@ -118,6 +197,16 @@ data = pickle.loads(user_data)  # B301: Pickle usage
         "-y", 
         "mcp-remote", 
         "http://localhost:7860/gradio_api/mcp/sse",
+        "--transport", 
+        "sse-only"
+      ]
+    },
+    "detect-secrets": {
+      "command": "npx",
+      "args": [
+        "-y", 
+        "mcp-remote", 
+        "http://localhost:7861/gradio_api/mcp/sse",
         "--transport", 
         "sse-only"
       ]
@@ -136,6 +225,13 @@ data = pickle.loads(user_data)  # B301: Pickle usage
       "transport": {
         "type": "sse",
         "url": "http://localhost:7860/gradio_api/mcp/sse"
+      }
+    },
+    {
+      "name": "Detect Secrets Scanner",
+      "transport": {
+        "type": "sse",
+        "url": "http://localhost:7861/gradio_api/mcp/sse"
       }
     }
   ]
@@ -180,8 +276,10 @@ data = pickle.loads(user_data)  # B301: Pickle usage
 
 1. Create a new Space on Hugging Face
 2. Choose Gradio SDK
-3. Upload `app.py` and `requirements.txt` files
-4. MCP server will be available at: `https://YOUR_USERNAME-bandit-mcp.hf.space/gradio_api/mcp/sse`
+3. Upload `app.py`, `detect_secrets_mcp.py` and `requirements.txt` files
+4. MCP servers will be available at:
+   - Bandit: `https://YOUR_USERNAME-bandit-mcp.hf.space/gradio_api/mcp/sse`
+   - Detect Secrets: `https://YOUR_USERNAME-detect-secrets-mcp.hf.space/gradio_api/mcp/sse`
 
 ## 🤝 AI Agent Integration
 
@@ -195,9 +293,10 @@ This MCP server can be integrated with any AI agents supporting MCP:
 ## 📖 Additional Resources
 
 - [Bandit Documentation](https://bandit.readthedocs.io/)
+- [Detect Secrets Documentation](https://github.com/Yelp/detect-secrets)
 - [MCP Specification](https://spec.modelcontextprotocol.io/)
 - [Gradio MCP Integration](https://gradio.app/guides/mcp-integration/)
 
 ---
 
-**Note**: Bandit is a static analyzer and cannot detect all types of vulnerabilities. Use it as part of a comprehensive security strategy. 
+**Note**: Both Bandit and Detect Secrets are static analyzers and cannot detect all types of vulnerabilities. Use them as part of a comprehensive security strategy. 

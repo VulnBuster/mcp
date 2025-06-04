@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Check installation of all required dependencies for Bandit MCP
+Check installation of all required dependencies for Bandit MCP and Detect Secrets MCP
 """
 
 import sys
@@ -35,7 +35,7 @@ def check_command(command):
         return False
 
 def main():
-    print("🔒 Checking Bandit MCP Dependencies")
+    print("🔒 Checking MCP Dependencies")
     print("=" * 50)
     
     all_good = True
@@ -45,7 +45,8 @@ def main():
     packages = [
         ("gradio", "gradio"),
         ("bandit", "bandit"),
-        ("smolagents", "smolagents")
+        ("smolagents", "smolagents"),
+        ("detect_secrets", "detect_secrets")
     ]
     
     for package, import_name in packages:
@@ -54,7 +55,7 @@ def main():
     
     # Check commands
     print("\n🔧 System commands:")
-    commands = ["bandit", "npx"]
+    commands = ["bandit", "npx", "detect-secrets"]
     
     for command in commands:
         if not check_command(command):
@@ -84,10 +85,36 @@ def main():
         print(f"❌ Error checking Bandit: {e}")
         all_good = False
     
+    # Check specific detect-secrets capabilities
+    print("\n🔍 Detect Secrets capabilities:")
+    try:
+        result = subprocess.run(["detect-secrets", "scan", "--help"], 
+                              capture_output=True, text=True)
+        if "--baseline" in result.stdout:
+            print("✅ Baseline - supported")
+        else:
+            print("❌ Baseline - not supported")
+            
+        if "--base64-limit" in result.stdout:
+            print("✅ Base64 entropy - supported")
+        else:
+            print("❌ Base64 entropy - not supported")
+            
+        if "--hex-limit" in result.stdout:
+            print("✅ Hex entropy - supported")
+        else:
+            print("❌ Hex entropy - not supported")
+            
+    except Exception as e:
+        print(f"❌ Error checking Detect Secrets: {e}")
+        all_good = False
+    
     print("\n" + "=" * 50)
     if all_good:
         print("🎉 All dependencies are installed correctly!")
-        print("💡 Now you can run: python app.py")
+        print("💡 Now you can run:")
+        print("   - python app.py (for Bandit MCP)")
+        print("   - python detect_secrets_mcp.py (for Detect Secrets MCP)")
     else:
         print("⚠️  Some dependencies are missing.")
         print("💡 Install them with: pip install -r requirements.txt")

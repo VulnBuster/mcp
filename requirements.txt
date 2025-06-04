@@ -1,4 +1,5 @@
 gradio[mcp]
 bandit[toml,baseline,sarif]
 pathlib
-smolagents 
+smolagents
+detect-secrets[word_list,gibberish] 
