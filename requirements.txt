@@ -2,4 +2,5 @@ gradio[mcp]
 bandit[toml,baseline,sarif]
 pathlib
 smolagents
-detect-secrets[word_list,gibberish] 
+detect-secrets[word_list,gibberish]
+pip-audit

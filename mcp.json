@@ -19,6 +19,16 @@
         "--transport", 
         "sse-only"
       ]
+    },
+    "pip-audit": {
+      "command": "npx",
+      "args": [
+        "-y", 
+        "mcp-remote", 
+        "http://localhost:7862/gradio_api/mcp/sse",
+        "--transport", 
+        "sse-only"
+      ]
     }
   }
 }
