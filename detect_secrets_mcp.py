@@ -69,82 +69,83 @@ def detect_secrets_scan(
         
         # Execute command with pipe
         if scan_type == "code":
-            # Используем параметр --string для прямого сканирования текста
-            cmd.append("--string")
-            cmd.append(code_input)
+            # Нормализуем строки
+            lines = code_input.replace('\r\n', '\n').replace('\r', '\n').split('\n')
+            print(f"Debug: Number of lines: {len(lines)}")
             
-            print(f"Debug: Command: {' '.join(cmd)}")
+            all_results = {}
+            all_plugins = set()
             
-            # Запускаем команду
-            result = subprocess.run(cmd, capture_output=True, text=True)
-            stdout, stderr = result.stdout, result.stderr
-            return_code = result.returncode
-            
-            print(f"Debug: Return code: {return_code}")
-            print(f"Debug: stdout length: {len(stdout)}")
-            print(f"Debug: stderr: {stderr}")
-            
-            if stdout:
-                print(f"Debug: First 100 chars of stdout: {stdout[:100]}")
+            for idx, line in enumerate(lines):
+                if not line.strip():
+                    continue  # пропускаем пустые строки
                 
-            # Если нет результатов, пробуем сканировать каждую строку отдельно
-            if return_code == 0:
-                # При использовании --string вывод не в JSON формате
-                # Создаем базовую структуру результатов
-                output_data = {
-                    "version": "1.5.0",
-                    "plugins_used": [],
-                    "filters_used": [],
-                    "results": {},
-                    "generated_at": ""
-                }
+                print(f"Debug: Scanning line {idx + 1}: {line}")
                 
-                # Парсим вывод построчно
-                for line in stdout.split('\n'):
-                    if ':' in line:
-                        plugin, result = line.split(':', 1)
+                cmd_line = cmd.copy()  # копия базовой команды
+                cmd_line.append("--string")
+                cmd_line.append(line)
+                
+                print(f"Debug: Command: {' '.join(cmd_line)}")
+                
+                result = subprocess.run(cmd_line, capture_output=True, text=True)
+                stdout, stderr = result.stdout, result.stderr
+                
+                print(f"Debug: Line {idx + 1} stdout: {stdout}")
+                
+                # Парсим текстовый вывод
+                for output_line in stdout.split('\n'):
+                    if ':' in output_line:
+                        plugin, result = output_line.split(':', 1)
                         plugin = plugin.strip()
                         result = result.strip()
                         
-                        # Добавляем информацию о плагине
-                        output_data["plugins_used"].append({"name": plugin})
+                        # Добавляем плагин в список использованных
+                        all_plugins.add(plugin)
                         
                         # Если плагин нашел секрет
                         if result.lower() == 'true':
-                            # Добавляем результат в секреты
-                            if plugin not in output_data["results"]:
-                                output_data["results"][plugin] = []
+                            # Добавляем результат
+                            if plugin not in all_results:
+                                all_results[plugin] = []
                             
-                            # Просто добавляем все непустые строки кода (или только первую)
-                            for idx, code_line in enumerate(code_input.split('\n')):
-                                if code_line.strip() and not code_line.strip().startswith('#'):
-                                    output_data["results"][plugin].append({
-                                        "type": plugin,
-                                        "line_number": idx + 1,
-                                        "line": code_line.strip(),
-                                        "hashed_secret": "hash_" + code_line.strip(),
-                                        "is_secret": True,
-                                        "is_verified": False
-                                    })
-                                    break  # Только первую строку
-                
-                # Преобразуем результаты в нужный формат
-                formatted_results = {}
-                for plugin, secrets in output_data["results"].items():
-                    for secret in secrets:
-                        key = f"{plugin}_{secret['line_number']}"
-                        formatted_results[key] = {
-                            "type": secret["type"],
-                            "line_number": secret["line_number"],
-                            "line": secret["line"],
-                            "hashed_secret": secret["hashed_secret"],
-                            "is_secret": True,
-                            "is_verified": False
-                        }
-                
-                output_data["results"] = formatted_results
-                stdout = json.dumps(output_data)
-                print(f"Debug: Processed results: {len(output_data['results'])} secrets found")
+                            # Создаем запись о найденном секрете
+                            secret_info = {
+                                "type": plugin,
+                                "line_number": idx + 1,
+                                "line": line,
+                                "hashed_secret": f"hash_{line}",
+                                "is_secret": True,
+                                "is_verified": False
+                            }
+                            
+                            # Добавляем энтропию, если она указана
+                            if '(' in result:
+                                entropy = result.split('(')[1].split(')')[0]
+                                try:
+                                    secret_info["entropy"] = float(entropy)
+                                except ValueError:
+                                    pass
+                            
+                            all_results[plugin].append(secret_info)
+            
+            # Собираем финальный результат
+            final_output = {
+                "version": "1.5.0",
+                "plugins_used": [{"name": plugin} for plugin in sorted(all_plugins)],
+                "filters_used": [],
+                "results": all_results,
+                "generated_at": ""
+            }
+            
+            print(f"Debug: Final results: {json.dumps(final_output, indent=2)}")
+            
+            return {
+                "success": True,
+                "results": final_output,
+                "stderr": "",
+                "return_code": 0
+            }
         else:
             # Для сканирования файла/директории используем обычный способ
             if not os.path.exists(code_input):
@@ -161,12 +162,6 @@ def detect_secrets_scan(
         if output_format == "json":
             try:
                 output_data = json.loads(stdout) if stdout else {}
-                print(f"Debug: Parsed JSON successfully")
-                print(f"Debug: Results keys: {list(output_data.keys())}")
-                if "results" in output_data:
-                    print(f"Debug: Number of results: {len(output_data['results'])}")
-                    if output_data["results"]:
-                        print(f"Debug: First result: {list(output_data['results'].keys())[0]}")
                 return {
                     "success": True,
                     "results": output_data,
