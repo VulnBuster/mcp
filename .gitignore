@@ -7,3 +7,4 @@ venv/
 .ruff_cache
 .mypy_cache
 .pytest_cache
+circle_test.py

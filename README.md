@@ -1,6 +1,6 @@
-# 🔒 Bandit Security Scanner MCP
+# 🔒 Security Tools MCP Collection
 
-MCP (Model Context Protocol) wrapper for Bandit - a specialized Python security linter that analyzes AST and detects common security issues.
+Коллекция MCP (Model Context Protocol) оберток для инструментов безопасности.
 
 ## 🌟 Features
 
@@ -10,6 +10,9 @@ MCP (Model Context Protocol) wrapper for Bandit - a specialized Python security 
 - **Baseline Management**: Create and compare with baseline files
 - **Profile Scanning**: Use specialized security profiles
 - **Flexible Configuration**: Customize severity and confidence levels
+- **Dependency Scanning**: Scan Python environments for known vulnerabilities with pip-audit
+- **Policy Compliance**: Check code against security policies with Circle Test
+- **Static Analysis**: Advanced code analysis with Semgrep
 
 ## 🚀 Quick Start
 
@@ -27,6 +30,15 @@ python app.py
 
 # Run Detect Secrets MCP server
 python detect_secrets_mcp.py
+
+# Run Pip Audit MCP server
+python pip_audit_mcp.py
+
+# Run Circle Test MCP server
+python circle_test_mcp.py
+
+# Run Semgrep MCP server
+python semgrep_mcp.py
 ```
 
 The servers will be available at:
@@ -36,6 +48,15 @@ The servers will be available at:
 - **Detect Secrets Web Interface**: `http://localhost:7861`
 - **Detect Secrets MCP Server**: `http://localhost:7861/gradio_api/mcp/sse`
 - **Detect Secrets MCP Schema**: `http://localhost:7861/gradio_api/mcp/schema`
+- **Pip Audit Web Interface**: `http://localhost:7862`
+- **Pip Audit MCP Server**: `http://localhost:7862/gradio_api/mcp/sse`
+- **Pip Audit MCP Schema**: `http://localhost:7862/gradio_api/mcp/schema`
+- **Circle Test Web Interface**: `http://localhost:7863`
+- **Circle Test MCP Server**: `http://localhost:7863/gradio_api/mcp/sse`
+- **Circle Test MCP Schema**: `http://localhost:7863/gradio_api/mcp/schema`
+- **Semgrep Web Interface**: `http://localhost:7864`
+- **Semgrep MCP Server**: `http://localhost:7864/gradio_api/mcp/sse`
+- **Semgrep MCP Schema**: `http://localhost:7864/gradio_api/mcp/schema`
 
 ## 🔧 Available Tools
 
@@ -126,6 +147,110 @@ Audits a detect-secrets baseline file.
 - `only_real`: Only show real secrets
 - `only_false`: Only show false positives
 
+### 3. Pip Audit Tools
+
+#### 3.1 `pip_audit_scan` - Basic Scanning
+
+Scans Python environment for known vulnerabilities using pip-audit.
+
+**Parameters:**
+- No parameters required - scans current Python environment
+
+**Usage Example:**
+```python
+pip_audit_scan()
+```
+
+**Example Output:**
+```json
+{
+  "success": true,
+  "results": {
+    "vulnerabilities": [
+      {
+        "name": "package-name",
+        "installed_version": "1.0.0",
+        "fixed_version": "1.0.1",
+        "description": "Vulnerability description",
+        "aliases": ["CVE-2024-XXXX"]
+      }
+    ]
+  }
+}
+```
+
+### 4. Circle Test Tools
+
+#### 4.1 `check_violation` - Policy Compliance Check
+
+Checks code against security policies.
+
+**Parameters:**
+- `code_input`: Code to check
+- `policies`: Dictionary of security policies
+
+**Usage Example:**
+```python
+check_violation(
+    code_input="def read_file(filename):\n    with open(filename, 'r') as f:\n        return f.read()",
+    policies={
+        "1": "Presence of SPDX-License-Identifier...",
+        "2": "Presence of plaintext credentials..."
+    }
+)
+```
+
+**Example Output:**
+```json
+{
+  "success": true,
+  "results": {
+    "1": {
+      "policy": "Presence of SPDX-License-Identifier...",
+      "violation": "no"
+    },
+    "2": {
+      "policy": "Presence of plaintext credentials...",
+      "violation": "yes"
+    }
+  }
+}
+```
+
+### 5. Semgrep Tools
+
+#### 5.1 `semgrep_scan` - Basic Scanning
+
+Scans code using Semgrep rules.
+
+**Parameters:**
+- `code_input`: Code to scan or path to file/directory
+- `scan_type`: "code" (direct code) or "path" (file/directory)
+- `rules`: Rules to use (e.g., "p/default" or path to rules file)
+- `output_format`: "json" or "text"
+
+**Usage Example:**
+```python
+semgrep_scan(
+    code_input="def get_user(user_id):\n    query = f'SELECT * FROM users WHERE id = {user_id}'\n    return db.execute(query)",
+    scan_type="code",
+    rules="p/default",
+    output_format="json"
+)
+```
+
+#### 5.2 `semgrep_list_rules` - List Available Rules
+
+Lists available Semgrep rules.
+
+**Parameters:**
+- No parameters required
+
+**Usage Example:**
+```python
+semgrep_list_rules()
+```
+
 ## 🎯 What Bandit Detects
 
 - **Insecure Functions**: `exec()`, `eval()`, `compile()`
@@ -148,6 +273,36 @@ Audits a detect-secrets baseline file.
 - **Slack Tokens**: Slack API tokens
 - **Stripe Keys**: Stripe API keys
 - **And More**: Many other types of secrets
+
+## 🛡️ What Pip Audit Detects
+
+- **Known Vulnerabilities**: CVE and other security advisories
+- **Outdated Dependencies**: Packages with known security issues
+- **Version Conflicts**: Incompatible package versions
+- **Deprecated Packages**: Packages that are no longer maintained
+- **Supply Chain Issues**: Compromised or malicious packages
+
+## 📋 What Circle Test Checks
+
+- **License Compliance**: SPDX-License-Identifier presence and validity
+- **Credential Management**: Plaintext credentials in configuration files
+- **Code Quality**: TODO/FIXME tags in production code
+- **Security Best Practices**: HTTP usage, logging of sensitive data
+- **API Usage**: Deprecated API calls
+- **Input Validation**: Unsanitized user input in commands
+- **File Operations**: Unsafe file path handling
+- **Database Security**: SQL injection prevention
+- **Path Management**: Absolute path usage
+- **Environment Management**: Production environment references
+- **Dependency Management**: Version pinning in lock files
+
+## 🔍 What Semgrep Detects
+
+- **Security Vulnerabilities**: SQL injection, command injection, path traversal
+- **Code Quality Issues**: Anti-patterns, best practices violations
+- **Custom Rules**: User-defined security and style rules
+- **Language-Specific Issues**: Language-specific vulnerabilities
+- **Framework-Specific Issues**: Framework-specific security concerns
 
 ## 🧪 Vulnerable Code Examples
 
@@ -210,6 +365,36 @@ private_key = "-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIBAAKCAQEA..."  # Detect S
         "--transport", 
         "sse-only"
       ]
+    },
+    "pip-audit": {
+      "command": "npx",
+      "args": [
+        "-y", 
+        "mcp-remote", 
+        "http://localhost:7862/gradio_api/mcp/sse",
+        "--transport", 
+        "sse-only"
+      ]
+    },
+    "circle-test": {
+      "command": "npx",
+      "args": [
+        "-y", 
+        "mcp-remote", 
+        "http://localhost:7863/gradio_api/mcp/sse",
+        "--transport", 
+        "sse-only"
+      ]
+    },
+    "semgrep": {
+      "command": "npx",
+      "args": [
+        "-y", 
+        "mcp-remote", 
+        "http://localhost:7864/gradio_api/mcp/sse",
+        "--transport", 
+        "sse-only"
+      ]
     }
   }
 }
@@ -232,6 +417,27 @@ private_key = "-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIBAAKCAQEA..."  # Detect S
       "transport": {
         "type": "sse",
         "url": "http://localhost:7861/gradio_api/mcp/sse"
+      }
+    },
+    {
+      "name": "Pip Audit Scanner",
+      "transport": {
+        "type": "sse",
+        "url": "http://localhost:7862/gradio_api/mcp/sse"
+      }
+    },
+    {
+      "name": "Circle Test Scanner",
+      "transport": {
+        "type": "sse",
+        "url": "http://localhost:7863/gradio_api/mcp/sse"
+      }
+    },
+    {
+      "name": "Semgrep Scanner",
+      "transport": {
+        "type": "sse",
+        "url": "http://localhost:7864/gradio_api/mcp/sse"
       }
     }
   ]
@@ -276,10 +482,13 @@ private_key = "-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIBAAKCAQEA..."  # Detect S
 
 1. Create a new Space on Hugging Face
 2. Choose Gradio SDK
-3. Upload `app.py`, `detect_secrets_mcp.py` and `requirements.txt` files
+3. Upload `app.py`, `detect_secrets_mcp.py`, `pip_audit_mcp.py`, `circle_test_mcp.py`, `semgrep_mcp.py` and `requirements.txt` files
 4. MCP servers will be available at:
    - Bandit: `https://YOUR_USERNAME-bandit-mcp.hf.space/gradio_api/mcp/sse`
    - Detect Secrets: `https://YOUR_USERNAME-detect-secrets-mcp.hf.space/gradio_api/mcp/sse`
+   - Pip Audit: `https://YOUR_USERNAME-pip-audit-mcp.hf.space/gradio_api/mcp/sse`
+   - Circle Test: `https://YOUR_USERNAME-circle-test-mcp.hf.space/gradio_api/mcp/sse`
+   - Semgrep: `https://YOUR_USERNAME-semgrep-mcp.hf.space/gradio_api/mcp/sse`
 
 ## 🤝 AI Agent Integration
 
@@ -294,9 +503,11 @@ This MCP server can be integrated with any AI agents supporting MCP:
 
 - [Bandit Documentation](https://bandit.readthedocs.io/)
 - [Detect Secrets Documentation](https://github.com/Yelp/detect-secrets)
+- [Pip Audit Documentation](https://pypi.org/project/pip-audit/)
+- [Semgrep Documentation](https://semgrep.dev/docs/)
 - [MCP Specification](https://spec.modelcontextprotocol.io/)
 - [Gradio MCP Integration](https://gradio.app/guides/mcp-integration/)
 
 ---
 
-**Note**: Both Bandit and Detect Secrets are static analyzers and cannot detect all types of vulnerabilities. Use them as part of a comprehensive security strategy. 
+**Note**: Bandit, Detect Secrets, Pip Audit, Circle Test, and Semgrep are static analyzers and cannot detect all types of vulnerabilities. Use them as part of a comprehensive security strategy. 

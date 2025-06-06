@@ -4,3 +4,6 @@ pathlib
 smolagents
 detect-secrets[word_list,gibberish]
 pip-audit
+python-dotenv
+aiohttp
+semgrep

@@ -29,6 +29,26 @@
         "--transport", 
         "sse-only"
       ]
+    },
+    "circle-test": {
+      "command": "npx",
+      "args": [
+        "-y", 
+        "mcp-remote", 
+        "http://localhost:7863/gradio_api/mcp/sse",
+        "--transport", 
+        "sse-only"
+      ]
+    },
+    "semgrep": {
+      "command": "npx",
+      "args": [
+        "-y", 
+        "mcp-remote", 
+        "http://localhost:7864/gradio_api/mcp/sse",
+        "--transport", 
+        "sse-only"
+      ]
     }
   }
 }
