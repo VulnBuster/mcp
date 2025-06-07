@@ -4,35 +4,35 @@
       "command": "docker",
       "args": [
         "run", "-i", "--rm",
-        "ghcr.io/VulnBuster/bandit-mcp-server:latest"
+        "ghcr.io/rustemhak/bandit-mcp-server:latest"
       ]
     },
     "detect-secrets": {
       "command": "docker",
       "args": [
         "run", "-i", "--rm",
-        "ghcr.io/VulnBuster/detect-secrets-mcp-server:latest"
+        "ghcr.io/rustemhak/detect-secrets-mcp-server:latest"
       ]
     },
     "pip-audit": {
       "command": "docker",
       "args": [
         "run", "-i", "--rm",
-        "ghcr.io/VulnBuster/pip-audit-mcp-server:latest"
+        "ghcr.io/rustemhak/pip-audit-mcp-server:latest"
       ]
     },
     "circle-test": {
       "command": "docker",
       "args": [
         "run", "-i", "--rm",
-        "ghcr.io/VulnBuster/circle-test-mcp-server:latest"
+        "ghcr.io/rustemhak/circle-test-mcp-server:latest"
       ]
     },
     "semgrep": {
       "command": "docker",
       "args": [
         "run", "-i", "--rm",
-        "ghcr.io/VulnBuster/semgrep-mcp-server:latest"
+        "ghcr.io/rustemhak/semgrep-mcp-server:latest"
       ]
     }
   }
