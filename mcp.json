@@ -4,8 +4,6 @@
       "command": "docker",
       "args": [
         "run", "-i", "--rm",
-        "-p", "7860:7860",
-        "-e", "PORT=7860",
         "ghcr.io/VulnBuster/bandit-mcp-server:latest"
       ]
     },
@@ -13,8 +11,6 @@
       "command": "docker",
       "args": [
         "run", "-i", "--rm",
-        "-p", "7861:7861",
-        "-e", "PORT=7861",
         "ghcr.io/VulnBuster/detect-secrets-mcp-server:latest"
       ]
     },
@@ -22,8 +18,6 @@
       "command": "docker",
       "args": [
         "run", "-i", "--rm",
-        "-p", "7862:7862",
-        "-e", "PORT=7862",
         "ghcr.io/VulnBuster/pip-audit-mcp-server:latest"
       ]
     },
@@ -31,8 +25,6 @@
       "command": "docker",
       "args": [
         "run", "-i", "--rm",
-        "-p", "7863:7863",
-        "-e", "PORT=7863",
         "ghcr.io/VulnBuster/circle-test-mcp-server:latest"
       ]
     },
@@ -40,8 +32,6 @@
       "command": "docker",
       "args": [
         "run", "-i", "--rm",
-        "-p", "7864:7864",
-        "-e", "PORT=7864",
         "ghcr.io/VulnBuster/semgrep-mcp-server:latest"
       ]
     }
