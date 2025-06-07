@@ -344,4 +344,5 @@ with gr.Blocks(title="Bandit Security Scanner MCP") as demo:
         """)
 
 if __name__ == "__main__":
-    demo.launch(mcp_server=True)
+    server_port = int(os.environ.get('PORT', 7860))
+    demo.launch(mcp_server=True, server_port=server_port)

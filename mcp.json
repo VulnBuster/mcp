@@ -1,53 +1,38 @@
 {
   "mcpServers": {
     "bandit-security": {
-      "command": "npx",
+      "command": "docker",
       "args": [
-        "-y", 
-        "mcp-remote", 
-        "http://localhost:7860/gradio_api/mcp/sse",
-        "--transport", 
-        "sse-only"
+        "run", "-i", "--rm",
+        "ghcr.io/VulnBuster/bandit-mcp-server:latest"
       ]
     },
     "detect-secrets": {
-      "command": "npx",
+      "command": "docker",
       "args": [
-        "-y", 
-        "mcp-remote", 
-        "http://localhost:7861/gradio_api/mcp/sse",
-        "--transport", 
-        "sse-only"
+        "run", "-i", "--rm",
+        "ghcr.io/VulnBuster/detect-secrets-mcp-server:latest"
       ]
     },
     "pip-audit": {
-      "command": "npx",
+      "command": "docker",
       "args": [
-        "-y", 
-        "mcp-remote", 
-        "http://localhost:7862/gradio_api/mcp/sse",
-        "--transport", 
-        "sse-only"
+        "run", "-i", "--rm",
+        "ghcr.io/VulnBuster/pip-audit-mcp-server:latest"
       ]
     },
     "circle-test": {
-      "command": "npx",
+      "command": "docker",
       "args": [
-        "-y", 
-        "mcp-remote", 
-        "http://localhost:7863/gradio_api/mcp/sse",
-        "--transport", 
-        "sse-only"
+        "run", "-i", "--rm",
+        "ghcr.io/VulnBuster/circle-test-mcp-server:latest"
       ]
     },
     "semgrep": {
-      "command": "npx",
+      "command": "docker",
       "args": [
-        "-y", 
-        "mcp-remote", 
-        "http://localhost:7864/gradio_api/mcp/sse",
-        "--transport", 
-        "sse-only"
+        "run", "-i", "--rm",
+        "ghcr.io/VulnBuster/semgrep-mcp-server:latest"
       ]
     }
   }
