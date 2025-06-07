@@ -1,0 +1,46 @@
+name: Build and Publish MCP Servers
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    strategy:
+      matrix:
+        server:
+          - name: bandit
+            port: 7860
+          - name: detect-secrets
+            port: 7861
+          - name: pip-audit
+            port: 7862
+          - name: circle-test
+            port: 7863
+          - name: semgrep
+            port: 7864
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          file: ./docker/${{ matrix.server.name }}.Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/${{ matrix.server.name }}-mcp-server:latest 

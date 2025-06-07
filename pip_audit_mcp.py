@@ -7,6 +7,7 @@ import subprocess
 import json
 from typing import Dict
 import gradio as gr
+import os
 
 def pip_audit_scan() -> Dict:
     """
@@ -76,4 +77,5 @@ with gr.Blocks(title="Pip Audit MCP") as demo:
         )
 
 if __name__ == "__main__":
-    demo.launch(mcp_server=True)
+    server_port = int(os.environ.get('PORT', 7862))
+    demo.launch(mcp_server=True, server_port=server_port)
