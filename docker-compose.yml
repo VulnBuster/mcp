@@ -1,0 +1,157 @@
+version: '3.8'
+
+services:
+
+  # Bandit Security Scanner
+  bandit-security-scanner:
+    build:
+      context: .
+      dockerfile: docker/bandit.Dockerfile
+    container_name: bandit-mcp-server
+    ports:
+      - "${BANDIT_EXTERNAL_PORT:-7861}:${BANDIT_INTERNAL_PORT:-7861}"
+    environment:
+      - GRADIO_SERVER_NAME=${GRADIO_SERVER_NAME:-0.0.0.0}
+      - GRADIO_SERVER_PORT=${BANDIT_INTERNAL_PORT:-7861}
+      - APP_NAME=Bandit Security Scanner MCP
+    volumes:
+      - ./scan_data:/app/scan_data
+      - ./reports:/app/reports
+      - ./projects:/app/projects
+    restart: unless-stopped
+    networks:
+      - mcp-network
+    labels:
+      - "application=bandit-security-scanner"
+      - "service=mcp-server"
+
+  # Detect Secrets Scanner
+  detect-secrets-scanner:
+    build:
+      context: .
+      dockerfile: docker/detect_secrets.Dockerfile
+    container_name: detect-secrets-mcp-server
+    ports:
+      - "${DETECT_SECRETS_EXTERNAL_PORT:-7862}:${DETECT_SECRETS_INTERNAL_PORT:-7862}"
+    environment:
+      - GRADIO_SERVER_NAME=${GRADIO_SERVER_NAME:-0.0.0.0}
+      - GRADIO_SERVER_PORT=${DETECT_SECRETS_INTERNAL_PORT:-7862}
+      - APP_NAME=Detect Secrets MCP
+    volumes:
+      - ./scan_data:/app/scan_data
+      - ./reports:/app/reports
+      - ./projects:/app/projects
+    restart: unless-stopped
+    networks:
+      - mcp-network
+    labels:
+      - "application=detect-secrets-scanner"
+      - "service=mcp-server"
+
+  # Pip Audit Scanner
+  pip-audit-scanner:
+    build:
+      context: .
+      dockerfile: docker/pip_audit.Dockerfile
+    container_name: pip-audit-mcp-server
+    ports:
+      - "${PIP_AUDIT_EXTERNAL_PORT:-7863}:${PIP_AUDIT_INTERNAL_PORT:-7863}"
+    environment:
+      - GRADIO_SERVER_NAME=${GRADIO_SERVER_NAME:-0.0.0.0}
+      - GRADIO_SERVER_PORT=${PIP_AUDIT_INTERNAL_PORT:-7863}
+      - APP_NAME=Pip Audit MCP
+    volumes:
+      - ./scan_data:/app/scan_data
+      - ./reports:/app/reports
+      - ./projects:/app/projects
+    restart: unless-stopped
+    networks:
+      - mcp-network
+    labels:
+      - "application=pip-audit-scanner"
+      - "service=mcp-server"
+
+  # Circle Test Scanner
+  circle-test-scanner:
+    build:
+      context: .
+      dockerfile: docker/circle_test.Dockerfile
+    container_name: circle-test-mcp-server
+    ports:
+      - "${CIRCLE_TEST_EXTERNAL_PORT:-7864}:${CIRCLE_TEST_INTERNAL_PORT:-7864}"
+    environment:
+      - GRADIO_SERVER_NAME=${GRADIO_SERVER_NAME:-0.0.0.0}
+      - GRADIO_SERVER_PORT=${CIRCLE_TEST_INTERNAL_PORT:-7864}
+      - APP_NAME=Circle Test MCP
+    volumes:
+      - ./scan_data:/app/scan_data
+      - ./reports:/app/reports
+      - ./projects:/app/projects
+    restart: unless-stopped
+    networks:
+      - mcp-network
+    labels:
+      - "application=circle-test-scanner"
+      - "service=mcp-server"
+
+  # Semgrep Scanner
+  semgrep-scanner:
+    build:
+      context: .
+      dockerfile: docker/semgrep.Dockerfile
+    container_name: semgrep-mcp-server
+    ports:
+      - "${SEMGREP_EXTERNAL_PORT:-7865}:${SEMGREP_INTERNAL_PORT:-7865}"
+    environment:
+      - GRADIO_SERVER_NAME=${GRADIO_SERVER_NAME:-0.0.0.0}
+      - GRADIO_SERVER_PORT=${SEMGREP_INTERNAL_PORT:-7865}
+      - APP_NAME=Semgrep MCP
+    volumes:
+      - ./scan_data:/app/scan_data
+      - ./reports:/app/reports
+      - ./projects:/app/projects
+    restart: unless-stopped
+    networks:
+      - mcp-network
+    labels:
+      - "application=semgrep-scanner"
+      - "service=mcp-server"
+
+  # Main Security Tools Agent
+  security-tools-agent:
+    build:
+      context: .
+      dockerfile: docker/agent.Dockerfile
+    container_name: security-tools-mcp-agent
+    ports:
+      - "${AGENT_EXTERNAL_PORT:-7860}:${AGENT_INTERNAL_PORT:-7860}"
+    environment:
+      - GRADIO_SERVER_NAME=${GRADIO_SERVER_NAME:-0.0.0.0}
+      - GRADIO_SERVER_PORT=${AGENT_INTERNAL_PORT:-7860}
+      - APP_NAME=Security Tools MCP Agent
+      - NEBIUS_API_KEY=${NEBIUS_API_KEY}
+    volumes:
+      - ./scan_data:/app/scan_data
+      - ./reports:/app/reports
+      - ./projects:/app/projects
+    depends_on:
+      - bandit-security-scanner
+      - detect-secrets-scanner
+      - pip-audit-scanner
+      - circle-test-scanner
+      - semgrep-scanner
+    restart: unless-stopped
+    networks:
+      - mcp-network
+    labels:
+      - "application=security-tools-agent"
+      - "service=main-agent"
+
+networks:
+  mcp-network:
+    driver: bridge
+
+volumes:
+  scan_data:
+  reports:
+  projects:
