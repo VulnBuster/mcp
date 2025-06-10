@@ -30,10 +30,91 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+def clean_and_validate_json(raw_text: str) -> str:
+    """
+    Агрессивно очищает и валидирует JSON из текста
+    """
+    logger.debug(f"Попытка очистки JSON из текста длиной {len(raw_text)}")
+    
+    # Убираем все возможные блоки думания и комментариев
+    cleaned = re.sub(r"<think>.*?</think>", "", raw_text, flags=re.DOTALL)
+    cleaned = re.sub(r"```json\s*", "", cleaned)
+    cleaned = re.sub(r"```\s*", "", cleaned)
+    cleaned = cleaned.strip()
+    
+    # Ищем JSON объект от первой { до соответствующей }
+    start_idx = cleaned.find("{")
+    if start_idx == -1:
+        return raw_text
+    
+    # Найдем соответствующую закрывающую скобку
+    bracket_count = 0
+    end_idx = -1
+    
+    for i in range(start_idx, len(cleaned)):
+        if cleaned[i] == '{':
+            bracket_count += 1
+        elif cleaned[i] == '}':
+            bracket_count -= 1
+            if bracket_count == 0:
+                end_idx = i
+                break
+    
+    if end_idx == -1:
+        return raw_text
+    
+    # Извлекаем JSON часть
+    json_part = cleaned[start_idx:end_idx + 1]
+    
+    try:
+        # Проверяем, является ли это валидным JSON
+        json.loads(json_part)
+        logger.debug("JSON успешно очищен и валидирован")
+        return json_part
+    except json.JSONDecodeError as e:
+        logger.debug(f"Ошибка при валидации очищенного JSON: {e}")
+        return raw_text
+
+def standardize_mcp_response(response_text: str, server_name: str) -> str:
+    """
+    Стандартизирует ответы от разных MCP серверов в единый формат
+    """
+    try:
+        # Сначала пытаемся парсить как JSON
+        parsed = json.loads(response_text)
+        
+        # Для Circle Test - ответы могут приходить в формате {"results": [...]}
+        if server_name == "circle_test":
+            if isinstance(parsed, dict) and "results" in parsed:
+                return json.dumps(parsed, ensure_ascii=False)
+            elif isinstance(parsed, list):
+                # Если пришел список результатов без обертки
+                standardized = {"results": parsed}
+                return json.dumps(standardized, ensure_ascii=False)
+        
+        # Для Bandit - ответы могут приходить в формате {"results": [...], "metrics": {...}}
+        elif server_name == "bandit":
+            if isinstance(parsed, dict):
+                return json.dumps(parsed, ensure_ascii=False)
+            elif isinstance(parsed, list):
+                # Если пришел список результатов без обертки
+                standardized = {"results": parsed}
+                return json.dumps(standardized, ensure_ascii=False)
+        
+        # Для других серверов - возвращаем как есть, если JSON валидный
+        return json.dumps(parsed, ensure_ascii=False)
+        
+    except json.JSONDecodeError:
+        # Если не JSON, возвращаем оригинальную строку
+        logger.debug(f"Ответ от {server_name} не является валидным JSON")
+        return response_text
+
 def extract_json_payload(raw: str) -> str:
     """
     Извлекает первый JSON объект {...} из строки, удаляя Markdown-разметку и дополнительный текст.
     """
+    logger.debug(f"Исходная строка для извлечения JSON (длина: {len(raw)}): {raw[:500]}...")
+    
     # Убираем блоки <think>
     raw = re.sub(r"<think>.*?</think>", "", raw, flags=re.DOTALL).strip()
     
@@ -41,24 +122,53 @@ def extract_json_payload(raw: str) -> str:
     raw = re.sub(r"```json\s*", "", raw)
     raw = re.sub(r"```", "", raw)
     
-    # Ищем первый '{' и последний '}'
+    # Убираем возможные лишние символы в начале и конце
+    raw = raw.strip()
+    
+    logger.debug(f"После очистки markdown (длина: {len(raw)}): {raw[:500]}...")
+    
+    # Ищем первый '{' и соответствующую ему закрывающую '}'
     start = raw.find("{")
-    end = raw.rfind("}")
+    if start == -1:
+        logger.warning("Не найден открывающий символ '{'")
+        return raw
     
-    if start != -1 and end != -1 and end > start:
-        json_candidate = raw[start:end + 1]
-        
-        # Проверяем валидность JSON перед возвратом
+    # Ищем соответствующую закрывающую скобку
+    bracket_count = 0
+    end = -1
+    for i in range(start, len(raw)):
+        if raw[i] == '{':
+            bracket_count += 1
+        elif raw[i] == '}':
+            bracket_count -= 1
+            if bracket_count == 0:
+                end = i
+                break
+    
+    if end == -1:
+        logger.warning("Не найден соответствующий закрывающий символ '}'")
+        return raw
+    
+    json_candidate = raw[start:end + 1]
+    logger.debug(f"Извлеченный JSON кандидат (длина: {len(json_candidate)}): {json_candidate[:500]}...")
+    
+    # Проверяем валидность JSON перед возвратом
+    try:
+        parsed = json.loads(json_candidate)
+        logger.debug("JSON успешно распарсен в extract_json_payload")
+        return json_candidate
+    except json.JSONDecodeError as e:
+        logger.warning(f"Извлеченный JSON невалидный: {str(e)}")
+        logger.debug(f"Проблемный JSON: {json_candidate}")
+        # Пытаемся вернуть полную строку без обработки
         try:
-            json.loads(json_candidate)
-            return json_candidate
-        except json.JSONDecodeError:
-            # Если JSON невалидный, возвращаем оригинальную строку
-            logger.warning("Извлеченный JSON невалидный, возвращаем оригинальную строку")
+            # Проверяем, может быть вся строка уже является валидным JSON
+            json.loads(raw)
+            logger.debug("Полная строка является валидным JSON")
             return raw
-    
-    # Если не нашли JSON, возвращаем оригинальную строку
-    return raw
+        except json.JSONDecodeError:
+            logger.warning("Даже полная строка не является валидным JSON, возвращаем как есть")
+            return raw
 
 # Глобальные переменные для переиспользования сессий
 MCP_WRAPPERS = {}
@@ -193,58 +303,21 @@ async def run_mcp_agent(message, server_name):
         # Получаем инструмент из кэша
         mcp_tools = MCP_WRAPPERS[server_name]
         
-        # Форматируем аргументы в зависимости от сервера
-        if server_name == "detect_secrets":
-            tool_args = {
-                "code_input": message,
-                "scan_type": "code",
-                "base64_limit": 4.5,
-                "hex_limit": 3.0,
-                "exclude_lines": ".*test.*|.*example.*",
-                "exclude_files": ".*test.*|.*example.*",
-                "exclude_secrets": ".*test.*|.*example.*",
-                "word_list": "password,secret,key,token,api_key,credential",
-                "output_format": "json"
-            }
-        elif server_name == "bandit":
-            tool_args = {
-                "code_input": message,
-                "scan_type": "code",
-                "severity_level": "high",
-                "confidence_level": "high",
-                "output_format": "json"
-            }
-        elif server_name == "circle_test":
-            tool_args = {
-                "prompt": message,
-                "policies": {
-                    "1": "Presence of SPDX-License-Identifier with an ID not in the approved list, or missing SPDX tag in top-level LICENSE file.",
-                    "2": "Presence of plaintext credentials (passwords, tokens, keys) in configuration files (YAML, JSON, .env, etc.).",
-                    "3": "Presence of TODO or FIXME tags in comments inside non-test production code files.",
-                    "4": "Presence of any string literal starting with http:// not wrapped in a validated secure-client.",
-                    "5": "Presence of logging statements that output sensitive data (user PII, private keys, passwords, tokens) without masking or hashing.",
-                    "6": "Presence of calls to deprecated or outdated APIs (functions or methods marked as deprecated).",
-                    "7": "Presence of subprocess or os.system calls that embed unsanitized user input into shell commands (e.g., f\"rm {user_input}\" with shell=True).",
-                    "8": "Presence of open(), read(), write(), or similar file operations using a path directly derived from user input without normalization or path-traversal checks (e.g., open(f\"{user_input}.txt\")).",
-                    "9": "Presence of SQL queries built using string concatenation with user input instead of parameterized queries or ORM methods.",
-                    "10": "Presence of string literals matching absolute filesystem paths (e.g., \"/home/...\" or \"C:\\\\...\") rather than relative paths or environment variables.",
-                    "11": "Presence of hostnames or URLs containing \"prod\", \"production\", or \"release\" that reference production databases or services in non-test code.",
-                    "12": "Presence of dependencies in lock files (Pipfile.lock or requirements.txt) without exact version pins (using version ranges like \">=\" or \"~=\" without a fixed version)."
-                }
-            }
-        else:
-            tool_args = {"code_input": message}
-        
         # Создаем агента
         agent = Agent(
             tools=[mcp_tools],
-            instructions=dedent("""\
-                You are an intelligent security assistant with access to MCP tools.
-                - Automatically select and invoke the appropriate tool(s) based on the user's request.
-                - Always choose the highest intensity settings available.
-                - If the user specifies particular checks, focus on those.
-                - Return ONLY the raw JSON output from the tool—no Markdown fences, no commentary, nothing else.
-                - Do not add any explanations or formatting around the JSON output.
+            instructions=dedent(f"""\
+                You are an intelligent security assistant with access to MCP tools for {server_name}.
+                
+                IMPORTANT INSTRUCTIONS:
+                1. Use the appropriate MCP tool to analyze the provided code
+                2. Return ONLY the raw JSON result from the MCP tool
+                3. Do NOT add any explanations, commentary, or additional formatting
+                4. Do NOT wrap the result in markdown code blocks
+                5. Do NOT add any text before or after the JSON
+                6. If the tool returns a "results" field, return the complete response including that field
+                
+                The JSON output should be clean and parseable without any modifications.
             """),
             markdown=False,  # Отключаем Markdown для получения чистого JSON
             show_tool_calls=True,
@@ -255,23 +328,25 @@ async def run_mcp_agent(message, server_name):
         )
         
         # Форматируем сообщение
-        formatted_message = {
-            "role": "user",
-            "content": [
-                {
-                    "type": "text",
-                    "text": f"Please analyze this code using {server_name} with the following parameters: {tool_args}"
-                }
-            ]
-        }
+        formatted_message = f"Analyze this code using {server_name}: {message}"
         
         # Запускаем анализ
         response = await agent.arun(formatted_message)
         logger.info(f"Успешное выполнение для {server_name}")
+        logger.debug(f"Полный ответ агента для {server_name}: {response.content}")
         
-        # Очищаем ответ и извлекаем JSON
-        clean_response = extract_json_payload(response.content)
-        return clean_response
+        # Сначала пробуем агрессивную очистку
+        cleaned_response = clean_and_validate_json(response.content)
+        
+        # Если агрессивная очистка не помогла, используем обычную функцию
+        if cleaned_response == response.content:
+            cleaned_response = extract_json_payload(response.content)
+        
+        # Стандартизируем ответ для конкретного сервера
+        standardized_response = standardize_mcp_response(cleaned_response, server_name)
+        
+        logger.debug(f"Стандартизированный ответ для {server_name}: {standardized_response}")
+        return standardized_response
         
     except Exception as e:
         logger.error(f"Ошибка выполнения {server_name}: {str(e)}")
@@ -353,7 +428,7 @@ async def process_file(file_obj, custom_checks, selected_servers):
         formatted_results = []
         for name, raw in raw_outputs.items():
             logger.debug(f"Обработка результата для {name}, длина: {len(raw)}")
-            logger.debug(f"Первые 200 символов: {raw[:200]}")
+            logger.debug(f"Полное содержимое для {name}: {raw}")
             
             try:
                 # Пытаемся распарсить JSON
@@ -375,7 +450,21 @@ async def process_file(file_obj, custom_checks, selected_servers):
             except json.JSONDecodeError as e:
                 # Если JSON некорректный, показываем как есть
                 logger.warning(f"Не удалось распарсить JSON для {name}: {str(e)}")
-                logger.debug(f"Проблемный контент для {name}: {raw}")
+                logger.debug(f"Позиция ошибки: {getattr(e, 'pos', 'неизвестно')}")
+                logger.debug(f"Длина строки: {len(raw)}")
+                
+                # Пытаемся найти проблемную область
+                if hasattr(e, 'pos') and e.pos:
+                    start_pos = max(0, e.pos - 50)
+                    end_pos = min(len(raw), e.pos + 50)
+                    problem_area = raw[start_pos:end_pos]
+                    logger.debug(f"Проблемная область вокруг позиции {e.pos}: {repr(problem_area)}")
+                
+                # Проверяем на наличие скрытых символов
+                has_non_printable = any(ord(c) < 32 and c not in '\n\r\t' for c in raw)
+                if has_non_printable:
+                    logger.warning(f"Обнаружены непечатаемые символы в ответе для {name}")
+                
                 formatted_results.append(f"### {name.upper()} (Raw output):\n```\n{raw}\n```")
             except Exception as e:
                 # Любые другие ошибки
